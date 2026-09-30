@@ -65,6 +65,9 @@ def make_pdf() -> None:
     body = styles["BodyText"]
     body.fontSize = 18
     body.leading = 25
+    caption = styles["Normal"].clone("caption")
+    caption.fontSize = 9
+    caption.textColor = colors.HexColor("#64708a")
     doc = SimpleDocTemplate(str(OUT / "snapdragon-local-review.pdf"), pagesize=landscape(letter), rightMargin=54, leftMargin=54, topMargin=42, bottomMargin=42)
     story = []
     for index, (heading, bullets) in enumerate(SLIDES):
@@ -74,7 +77,7 @@ def make_pdf() -> None:
             story.append(Paragraph(f"• {bullet}", body))
             story.append(Spacer(1, 12))
         story.append(Spacer(1, 24))
-        story.append(Paragraph(f"{index + 1:02d}  |  SNAPDRAGON LOCAL REVIEW", styles["Caption"]))
+        story.append(Paragraph(f"{index + 1:02d}  |  SNAPDRAGON LOCAL REVIEW", caption))
         if index != len(SLIDES) - 1:
             story.append(Spacer(1, 280))
     doc.build(story)
