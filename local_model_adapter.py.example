@@ -1,0 +1,46 @@
+"""Example local adapter for an ONNX causal language model.
+
+Copy this file to local_model_adapter.py, install transformers, and set
+SNAPDRAGON_MODEL to a local model directory containing an ONNX export.
+The model directory is intentionally excluded from version control.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+
+MODEL_DIR = Path(os.environ.get("SNAPDRAGON_MODEL", "models/code-review"))
+
+
+def review(prompt: str) -> str:
+    """Generate a short review locally; never calls a network API."""
+    try:
+        import onnxruntime as ort
+        from transformers import AutoTokenizer
+    except ImportError as exc:
+        raise RuntimeError(
+            "Install the local adapter dependencies with: "
+            "python -m pip install transformers"
+        ) from exc
+
+    if not MODEL_DIR.is_dir():
+        raise RuntimeError(
+            f"Local model directory does not exist: {MODEL_DIR}. "
+            "Set SNAPDRAGON_MODEL to an offline ONNX model directory."
+        )
+
+    model_file = MODEL_DIR / "model.onnx"
+    if not model_file.is_file():
+        raise RuntimeError(f"Expected ONNX model at {model_file}")
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR, local_files_only=True)
+    inputs = tokenizer(prompt, return_tensors="np", truncation=True, max_length=2048)
+    session = ort.InferenceSession(
+        str(model_file),
+        providers=["QNNExecutionProvider", "CPUExecutionProvider"],
+    )
+    output_names = [output.name for output in session.get_outputs()]
+    outputs = session.run(output_names, dict(inputs))
+    return str(outputs[0])
